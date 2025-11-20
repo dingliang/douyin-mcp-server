@@ -1,0 +1,12 @@
+services:
+  douyin-mcp:
+    build: .
+    container_name: douyin-mcp-server
+    environment:
+      MCP_TRANSPORT: "streamable-http"
+      MCP_HOST: "0.0.0.0"
+      MCP_PORT: "8000"
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+    ports:
+      - "8000:8000"
+    restart: unless-stopped

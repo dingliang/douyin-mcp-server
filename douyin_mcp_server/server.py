@@ -10,6 +10,7 @@
 """
 
 import os
+import argparse
 import re
 import json
 import requests
@@ -28,7 +29,7 @@ from mcp.server.fastmcp import Context
 
 
 # 创建 MCP 服务器实例
-mcp = FastMCP("Douyin MCP Server", 
+mcp = FastMCP("Douyin MCP Server",
               dependencies=["requests", "ffmpeg-python", "tqdm", "dashscope"])
 
 # 请求头，模拟移动端访问
@@ -366,7 +367,27 @@ def douyin_text_extraction_guide() -> str:
 
 def main():
     """启动MCP服务器"""
-    mcp.run()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--transport", choices=["stdio", "http", "sse", "streamable-http"], default=None)
+    parser.add_argument("--host", default=None)
+    parser.add_argument("--port", type=int, default=None)
+    args = parser.parse_args()
+    transport = args.transport or os.getenv("MCP_TRANSPORT") or None
+    if transport == "http":
+        transport = "streamable-http"
+    host = args.host or os.getenv("MCP_HOST") or None
+    env_port = os.getenv("MCP_PORT")
+    port = args.port or (int(env_port) if env_port else None)
+    if transport in ("streamable-http", "sse") or port is not None or host is not None:
+        if port is not None:
+            mcp.settings.port = port
+        if host is not None:
+            mcp.settings.host = host
+        if transport is None:
+            transport = "streamable-http"
+        mcp.run(transport=transport)
+    else:
+        mcp.run()
 
 
 if __name__ == "__main__":

@@ -58,9 +58,62 @@
 }
 ```
 
-### 步骤 3：开始使用
+### 步骤 3：开始使用（本地/uv 运行）
 
 配置完成后，您就可以在支持的应用中正常调用 MCP 工具了。
+
+### 使用 Docker 运行
+
+```bash
+# 构建镜像
+docker build -t douyin-mcp-server:local .
+
+# 运行（仅下载链接工具，不需要密钥）
+docker run --rm -p 8000:8000 douyin-mcp-server:local
+
+# 运行（启用文本提取，需要阿里云百炼密钥）
+docker run --rm -p 8000:8000 \
+  -e DASHSCOPE_API_KEY="你的API密钥" \
+  douyin-mcp-server:local
+```
+
+服务端点：`http://localhost:8000/mcp`
+
+### 使用 Docker Compose 运行
+
+```bash
+# 设置环境变量（macOS/Linux）
+export DASHSCOPE_API_KEY="你的API密钥"
+
+# 启动
+docker compose up -d
+
+# 查看日志
+docker compose logs -f
+
+# 停止
+docker compose down
+```
+
+可通过修改 `docker-compose.yml` 调整端口或环境变量：
+
+```yaml
+services:
+  douyin-mcp:
+    build: .
+    environment:
+      MCP_TRANSPORT: "streamable-http"
+      MCP_HOST: "0.0.0.0"
+      MCP_PORT: "8000"
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+    ports:
+      - "8000:8000"
+```
+
+说明：
+- Docker 镜像中已安装 `ffmpeg`，无需额外配置
+- 网络传输默认使用 Streamable HTTP，容器绑定 `0.0.0.0:8000`
+- 如果只使用下载链接工具，可以不设置 `DASHSCOPE_API_KEY`
 
 ## ⚙️ API 配置说明
 
@@ -175,8 +228,11 @@ pip install -e .
 ### 运行测试
 
 ```bash
-# 启动服务器进行测试
+# 启动服务器进行测试（STDIO）
 python -m douyin_mcp_server.server
+
+# 启动网络模式（Streamable HTTP，端口 8000）
+python -m douyin_mcp_server.server --transport streamable-http --port 8000
 ```
 
 ### Claude Desktop 本地开发配置

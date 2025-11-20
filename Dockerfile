@@ -12,7 +12,12 @@ ARG APT_MIRROR=mirrors.aliyun.com
 ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple
 
 RUN set -eux; \
-    sed -i -e "s|deb.debian.org|${APT_MIRROR}|g" -e "s|security.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list; \
+    codename="$(grep VERSION_CODENAME /etc/os-release | cut -d= -f2)"; \
+    if [ -f /etc/apt/sources.list.d/debian.sources ]; then rm /etc/apt/sources.list.d/debian.sources; fi; \
+    echo "deb http://${APT_MIRROR}/debian ${codename} main contrib non-free" > /etc/apt/sources.list; \
+    echo "deb http://${APT_MIRROR}/debian ${codename}-updates main contrib non-free" >> /etc/apt/sources.list; \
+    echo "deb http://${APT_MIRROR}/debian ${codename}-backports main contrib non-free" >> /etc/apt/sources.list; \
+    echo "deb http://${APT_MIRROR}/debian-security ${codename}-security main contrib non-free" >> /etc/apt/sources.list; \
     apt-get update; \
     apt-get install -y --no-install-recommends ffmpeg; \
     rm -rf /var/lib/apt/lists/*

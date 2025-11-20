@@ -1,6 +1,10 @@
 services:
   douyin-mcp:
-    build: .
+    build:
+      context: .
+      args:
+        APT_MIRROR: ${APT_MIRROR:-mirrors.aliyun.com}
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple}
     container_name: douyin-mcp-server
     environment:
       MCP_TRANSPORT: "streamable-http"

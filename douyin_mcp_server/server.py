@@ -29,8 +29,74 @@ from mcp.server.fastmcp import Context
 
 
 # 创建 MCP 服务器实例
-mcp = FastMCP("Douyin MCP Server",
-              dependencies=["requests", "ffmpeg-python", "tqdm", "dashscope"])
+class AuthFastMCP(FastMCP):
+    def _wrap_app_with_auth(self, app):
+        token = os.getenv("MCP_AUTH_TOKEN")
+        user = os.getenv("MCP_AUTH_BASIC_USER")
+        password = os.getenv("MCP_AUTH_BASIC_PASS")
+        auth_type = (os.getenv("MCP_AUTH_TYPE") or "bearer").lower()
+        enabled = bool(token) or (bool(user) and bool(password))
+        if not enabled:
+            return app
+        from starlette.middleware.base import BaseHTTPMiddleware
+        from starlette.responses import JSONResponse
+        import base64
+
+        class _AuthMW(BaseHTTPMiddleware):
+            def __init__(self, application, auth_type_, token_, user_, password_, paths_):
+                super().__init__(application)
+                self.auth_type = auth_type_
+                self.token = token_
+                self.user = user_
+                self.password = password_
+                self.paths = paths_
+
+            async def dispatch(self, request, call_next):
+                path = request.url.path
+                if not any(path.startswith(p) for p in self.paths):
+                    return await call_next(request)
+                auth = request.headers.get("authorization") or request.headers.get("Authorization")
+                if self.auth_type == "bearer":
+                    if not self.token:
+                        return await call_next(request)
+                    if not auth or not auth.startswith("Bearer ") or auth.split(" ", 1)[1] != self.token:
+                        return JSONResponse({"error": "unauthorized"}, status_code=401)
+                elif self.auth_type == "basic":
+                    if not (self.user and self.password):
+                        return await call_next(request)
+                    if not auth or not auth.startswith("Basic "):
+                        return JSONResponse({"error": "unauthorized"}, status_code=401)
+                    try:
+                        decoded = base64.b64decode(auth.split(" ", 1)[1]).decode()
+                    except Exception:
+                        return JSONResponse({"error": "unauthorized"}, status_code=401)
+                    if ":" not in decoded:
+                        return JSONResponse({"error": "unauthorized"}, status_code=401)
+                    u, p = decoded.split(":", 1)
+                    if u != self.user or p != self.password:
+                        return JSONResponse({"error": "unauthorized"}, status_code=401)
+                return await call_next(request)
+
+        app.add_middleware(
+            _AuthMW,
+            auth_type_=auth_type,
+            token_=token,
+            user_=user,
+            password_=password,
+            paths_=[self.settings.streamable_http_path, self.settings.sse_path, self.settings.message_path],
+        )
+        return app
+
+    def streamable_http_app(self):
+        app = super().streamable_http_app()
+        return self._wrap_app_with_auth(app)
+
+    def sse_app(self, mount_path: str | None = None):
+        app = super().sse_app(mount_path)
+        return self._wrap_app_with_auth(app)
+
+mcp = AuthFastMCP("Douyin MCP Server", 
+                  dependencies=["requests", "ffmpeg-python", "tqdm", "dashscope"])
 
 # 请求头，模拟移动端访问
 HEADERS = {

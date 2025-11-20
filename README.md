@@ -106,6 +106,10 @@ services:
       MCP_HOST: "0.0.0.0"
       MCP_PORT: "8000"
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      MCP_AUTH_TYPE: ${MCP_AUTH_TYPE:-bearer}
+      MCP_AUTH_TOKEN: ${MCP_AUTH_TOKEN:-}
+      MCP_AUTH_BASIC_USER: ${MCP_AUTH_BASIC_USER:-}
+      MCP_AUTH_BASIC_PASS: ${MCP_AUTH_BASIC_PASS:-}
     ports:
       - "8000:8000"
 ```
@@ -114,6 +118,55 @@ services:
 - Docker 镜像中已安装 `ffmpeg`，无需额外配置
 - 网络传输默认使用 Streamable HTTP，容器绑定 `0.0.0.0:8000`
 - 如果只使用下载链接工具，可以不设置 `DASHSCOPE_API_KEY`
+
+### 启用鉴权（HTTP/SSE）
+
+服务支持通过环境变量启用请求头鉴权：
+
+- `MCP_AUTH_TYPE`: `bearer` 或 `basic`，默认 `bearer`
+- `MCP_AUTH_TOKEN`: 当 `bearer` 模式下为必填
+- `MCP_AUTH_BASIC_USER` / `MCP_AUTH_BASIC_PASS`: 当 `basic` 模式下为必填
+
+请求头示例：
+
+- Bearer: `Authorization: Bearer <token>`
+- Basic: `Authorization: Basic <base64(user:pass)>`
+
+校验覆盖路径：`/mcp`、`/sse`、`/messages/`
+
+### 本地调试（Python 直接启动）
+
+```bash
+# 创建并激活虚拟环境
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 安装依赖
+pip install -e .
+
+# 可选：启用鉴权（Bearer）
+export MCP_AUTH_TYPE=bearer
+export MCP_AUTH_TOKEN=dev-token
+
+# 启动网络模式（Streamable HTTP，端口 8000）
+python -m douyin_mcp_server.server --transport streamable-http --port 8000
+
+# 访问端点
+# http://localhost:8000/mcp
+```
+
+### 国内镜像加速（Docker 构建）
+
+```bash
+# 默认使用阿里云镜像
+docker build -t douyin-mcp-server:local .
+
+# 指定清华镜像（APT/PyPI）
+docker build \
+  --build-arg APT_MIRROR=mirrors.tuna.tsinghua.edu.cn \
+  --build-arg PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple \
+  -t douyin-mcp-server:local .
+```
 
 ## ⚙️ API 配置说明
 

@@ -7,6 +7,10 @@ services:
       MCP_HOST: "0.0.0.0"
       MCP_PORT: "8000"
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      MCP_AUTH_TYPE: ${MCP_AUTH_TYPE:-bearer}
+      MCP_AUTH_TOKEN: ${MCP_AUTH_TOKEN:-}
+      MCP_AUTH_BASIC_USER: ${MCP_AUTH_BASIC_USER:-}
+      MCP_AUTH_BASIC_PASS: ${MCP_AUTH_BASIC_PASS:-}
     ports:
       - "8000:8000"
     restart: unless-stopped
